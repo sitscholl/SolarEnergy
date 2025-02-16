@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from src.solar import feature_insolation
 from src.transformation import convert_solar_energy
+from src.plot import encode_plot
 from tempfile import TemporaryDirectory
 from pathlib import Path
 import datetime
@@ -87,6 +88,7 @@ if consumption_tbl is not None:
     en_tot_ann = dict_production[area_select].sum().round(1)
     monthly_energy = dict_production[area_select].round(2).to_dict()
     monthly_consumption = energy_tbl["consumption"].round(2).to_dict()
+    kWp = area_select * efficiency
 
     environment = Environment(loader=FileSystemLoader("templates/"))
     template = environment.get_template("report.html")
@@ -104,6 +106,7 @@ if consumption_tbl is not None:
         total_annual_energy = en_tot_ann,
         avoided_costs = ((en_tot_ann * price) / 100).round(1),
         payback_time = np.nan,
+        kWp = kWp,
         monthly_energy_chart = encode_plot(fig),
         monthly_energy = monthly_energy,
         monthly_consumption = monthly_consumption,
