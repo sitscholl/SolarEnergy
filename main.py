@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from pathlib import Path
 import datetime
 import matplotlib.pyplot as plt
+from jinja2 import Environment, FileSystemLoader
 import logging
 import logging.config
 
@@ -20,11 +21,13 @@ logger = logging.getLogger(__name__)
 r = 100
 p = (642202.50, 5163856.06)
 crs = 25832
+area_select = 15
 height = 7
-slope = 15
-aspect = 270
+slope = 30
+aspect = 180
 efficiency = 0.15
 system_loss = 0.8
+price = 9 #ct/kWh
 consumption_tbl = 'data/power_consumption.xlsx'
 #################
 
@@ -64,9 +67,9 @@ if consumption_tbl is not None:
     energy_tbl = insolation_agg.join(power_cns)
 
     #Plot results
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize = (12, 6))
     ax.plot(energy_tbl["consumption"], label = "Consumption", color = 'black')
-    
+    dict_production = {}
     for area in [5, 10, 15, 20]:
 
         en_production = convert_solar_energy(
@@ -74,9 +77,43 @@ if consumption_tbl is not None:
         )
         en_diff = (energy_tbl["consumption"] - en_production).sum().round(2)
         ax.plot(en_production, label = f"{area}m² ({en_diff}kWh)")
+        dict_production[area] = en_production
+        # en_production / energy_tbl["consumption"]
 
     ax.legend()
     ax.set_ylim(0, 750)
-    plt.savefig(f'data/results/comparison_lines_r{r}_h{height}_s{slope}_a{aspect}_e{efficiency}_sl{system_loss}.png', dpi = 300)
+    #plt.savefig(f'data/results/comparison_lines_r{r}_h{height}_s{slope}_a{aspect}_e{efficiency}_sl{system_loss}.png', dpi = 300)
 
+    en_tot_ann = dict_production[area_select].sum().round(1)
+    monthly_energy = dict_production[area_select].round(2).to_dict()
+    monthly_consumption = energy_tbl["consumption"].round(2).to_dict()
 
+    environment = Environment(loader=FileSystemLoader("templates/"))
+    template = environment.get_template("report.html")
+    content = template.render(
+        rep_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+        dem_resolution = r,
+        point_coordinates = p,
+        panel_area = area_select,
+        panel_height = height,
+        slope = slope,
+        aspect = aspect,
+        efficiency = efficiency,
+        system_loss = system_loss,
+        price_per_kwh = price,
+        total_annual_energy = en_tot_ann,
+        avoided_costs = ((en_tot_ann * price) / 100).round(1),
+        payback_time = np.nan,
+        monthly_energy_chart = encode_plot(fig),
+        monthly_energy = monthly_energy,
+        monthly_consumption = monthly_consumption,
+        total_consumption = energy_tbl["consumption"].sum(),
+        total_generation = en_tot_ann,
+        gen_cons = (en_tot_ann - energy_tbl["consumption"].sum()).round(2),
+        gen_cons_div = (en_tot_ann / energy_tbl["consumption"].sum()).round(2),
+    )
+
+    report_time = datetime.datetime.now().strftime('%Y_%m_%d_%H%M')
+    out_report = Path("data", "results", f'{report_time}.html')
+    with open(out_report, mode="w", encoding="utf-8") as report:
+        report.write(content)

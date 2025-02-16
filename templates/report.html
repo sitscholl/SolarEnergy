@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Power Production Report</title>
+  <!-- Bootstrap CSS for styling -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <style>
+    body {
+      padding-top: 20px;
+      padding-bottom: 20px;
+    }
+    .section-title {
+      margin-top: 40px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 10px;
+    }
+    .table-params th {
+      width: 40%;
+    }
+    .result-value {
+      font-size: 1.5em;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="text-center">Solar Power Production Report</h1>
+
+    <!-- Input Parameters Section -->
+    <div class="section-title">
+      <h2>Input Parameters</h2>
+    </div>
+    <table class="table table-bordered table-params">
+      <tr>
+        <th>DEM Resolution</th>
+        <td>{{ dem_resolution }}m</td>
+      </tr>
+      <tr>
+        <th>Point Coordinates</th>
+        <td>{{ point_coordinates }}</td>
+      </tr>
+      <tr>
+        <th>Panel Area</th>
+        <td>{{ panel_area }}m²</td>
+      </tr>
+      <tr>
+        <th>Panel Height</th>
+        <td>{{ panel_height }}m</td>
+      </tr>
+      <tr>
+        <th>Panel Slope</th>
+        <td>{{ slope }}°</td>
+      </tr>
+      <tr>
+        <th>Panel Aspect</th>
+        <td>{{ aspect }}°</td>
+      </tr>
+      <tr>
+        <th>Panel Efficiency</th>
+        <td>{{ efficiency }}%</td>
+      </tr>
+      <tr>
+        <th>System Loss</th>
+        <td>{{ system_loss }}%</td>
+      </tr>
+      <tr>
+        <th>Price per kWh</th>
+        <td>{{ price_per_kwh }} ct/kWh</td>
+      </tr>
+    </table>
+
+    <!-- Results Section -->
+    <div class="section-title">
+      <h2>Results</h2>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <p>Total Annual Energy Generated:</p>
+        <p class="result-value">{{ total_annual_energy }} kWh</p>
+      </div>
+      <div class="col-md-6">
+        <p>Total Annual Value:</p>
+        <p class="result-value">{{ avoided_costs }} €</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <p>Estimated Payback Time:</p>
+        <p class="result-value">{{ payback_time }} years</p>
+      </div>
+    </div>
+
+    <!-- Monthly Energy Generation Section -->
+    <div class="section-title">
+      <h2>Monthly Energy Generation</h2>
+    </div>
+    <div class="text-center mb-4">
+      <img src="data:image/png;base64, {{ monthly_energy_chart }}" alt="Monthly Energy Generation Chart" class="img-fluid">
+    </div>
+
+    <!-- Monthly Energy Comparison Section -->
+    <div class="section-title">
+      <h2>Monthly Energy Comparison</h2>
+    </div>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Energy Generated (kWh)</th>
+          <th>Energy Consumption (kWh)</th>
+          <th>Difference (kWh)</th>
+          <th>Coverage (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for month, generated in monthly_energy.items() %}
+        <tr>
+          <td>{{ month.strftime('%Y-%m-%d') }}</td>
+          <td>{{ generated }}</td>
+          <td>{{ monthly_consumption[month] }}</td>
+          <td>{{ '{0:0.2f}'.format(generated - monthly_consumption[month])}}</td>
+          <td>{{ '{0:0.1f}'.format((generated / monthly_consumption[month])*100)}}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td>Total</td>
+          <td>{{ total_generation }}</td>
+          <td>{{ total_consumption }}</td>
+          <td>{{ gen_cons }}</td>
+          <td>{{ gen_cons_div }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
