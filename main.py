@@ -3,6 +3,7 @@ import pandas as pd
 from src.solar import feature_insolation
 from src.transformation import convert_solar_energy
 from src.plot import encode_plot
+from src.optim import get_optim_values, test_parameters, load_monthly_radiation
 from tempfile import TemporaryDirectory
 from pathlib import Path
 import datetime
@@ -22,17 +23,47 @@ logger = logging.getLogger(__name__)
 r = 100
 p = (642202.50, 5163856.06)
 crs = 25832
-area_select = 15
+area_select = 20
 height = 7
 slope = 30
 aspect = 180
 efficiency = 0.15
 system_loss = 0.8
-price = 9 #ct/kWh
+price = 45 #ct/kWh
 consumption_tbl = 'data/power_consumption.xlsx'
+optim_file = 'data/optim/optim_result_2025_02_22_1443.csv'
 #################
 
+logger.info('Starting program at %s', datetime.datetime.now().strftime('%Y_%m_%d_%H%M'))
 dem_p = f"data/dem{r}m.tif"
+
+##Parameter optimization
+if optim_file is None:
+    logger.info('Optimizing parameters')
+    import arcpy
+    files = list(Path('data/optim').glob('*.csv'))
+    observed_srad = load_monthly_radiation(files)
+
+    province_shp = 'data/optim/stations_province.shp'
+    features_optim = arcpy.management.Project(
+        province_shp,
+        out_dataset="data/_thrash/province_shp_re.shp",
+        out_coor_system=arcpy.Describe(dem_p).spatialReference,
+    )
+
+    optim_tbl = test_parameters(
+        dem_p,
+        str(features_optim),
+        observed_srad,
+        step=0.1,
+        out=f"data/optim/optim_result_{datetime.datetime.now():%Y_%m_%d_%H%M}.csv",
+    )
+    t_opt, d_opt = get_optim_values(optim_tbl, metric = 'rmse')
+else:
+    logger.info(f'Using optimized parameters from {optim_file}')
+    t_opt, d_opt = get_optim_values(pd.read_csv(optim_file), metric="rmse")
+# optim_lines(optim_tbl, observed_srad, '19300MS', t_opt, d_opt)
+
 
 out_dir = Path(TemporaryDirectory().name)
 out_dir.mkdir(exist_ok = True, parents = True)
@@ -44,34 +75,26 @@ insolation = feature_insolation(
     feature_offset=height,
     feature_slope=slope,
     feature_aspect=aspect,
-    interval_unit="WEEK",
+    transmittivity=t_opt,
+    diffuse_proportion=d_opt,
+    interval_unit="DAY",
     interval=1
 )
-insolation = insolation[["str_time", "global_ave", "direct_ave", "diff_ave", "dir_dur"]].rename(columns={"str_time": "date"})
-insolation['date'] = pd.to_datetime(insolation['date'], format = '%Y-%m-%d')
 
-## Disaggregate to daily values
-# TODO: make this more robust and dynamic for different frequencies
-p_len = 7
-ts_start, ts_end = datetime.datetime(2024, 1, 1), datetime.datetime(2024, 12, 31)
-insolation_diss = insolation.set_index('date').resample('D').ffill() / p_len
-insolation_diss = insolation_diss.reindex(pd.date_range(ts_start, ts_end)).ffill()
+insolation_mon = insolation.set_index('date').resample('MS')[['global_ave']].sum()
 
 if consumption_tbl is not None:
     power_cns = pd.read_excel(consumption_tbl, usecols = ['date', 'consumption'])
     power_cns['date'] = pd.to_datetime(power_cns['date'], format = '%Y-%m-%d')
     power_cns.set_index('date', inplace = True)
 
-    ##Assumes a frequency of monthly data in power_cns
-    insolation_agg = insolation_diss.resample('MS').sum()
-
-    energy_tbl = insolation_agg.join(power_cns)
+    energy_tbl = insolation_mon.join(power_cns)
 
     #Plot results
     fig, ax = plt.subplots(figsize = (12, 6))
     ax.plot(energy_tbl["consumption"], label = "Consumption", color = 'black')
     dict_production = {}
-    for area in [5, 10, 15, 20]:
+    for area in [5, 10, 15, 20, 25, 30]:
 
         en_production = convert_solar_energy(
             energy_tbl["global_ave"], efficiency=efficiency, system_loss=system_loss, area=area
@@ -83,7 +106,6 @@ if consumption_tbl is not None:
 
     ax.legend()
     ax.set_ylim(0, 750)
-    #plt.savefig(f'data/results/comparison_lines_r{r}_h{height}_s{slope}_a{aspect}_e{efficiency}_sl{system_loss}.png', dpi = 300)
 
     en_tot_ann = dict_production[area_select].sum().round(1)
     monthly_energy = dict_production[area_select].round(2).to_dict()

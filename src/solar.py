@@ -1,9 +1,9 @@
 import arcpy
 from arcpy.sa import *
-from tempfile import TemporaryFile
 import pandas as pd
 from pathlib import Path
 import logging
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ def feature_insolation(
     interval_unit="WEEK",
     diffuse_proportion=0.3,
     transmittivity=0.7,
+    unique_id_field="ID",
     **kwargs
 ):
     """
@@ -56,7 +57,7 @@ def feature_insolation(
         radiation. The default is "12/31/2024".
     interval_unit : str, optional
         The time interval at which to calculate the solar radiation. The options
-        are 'MINUTE', 'HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'. The default is
+        are 'MINUTE', 'HOUR', 'DAY', 'WEEK'. The default is
         'WEEK'.
     diffuse_proportion : float, optional
         The proportion of diffuse radiation. The default is 0.3.
@@ -72,19 +73,22 @@ def feature_insolation(
         A table with the solar radiation values for each feature.
     """
 
-    in_features = coords_to_shp(features, crs = crs, out = Path(out_dir, "features.shp"))
+    if isinstance(features, list):
+        features = coords_to_shp(features, crs = crs, out = Path(out_dir, "features.shp"))
 
     spatial_ref = arcpy.Describe(dem).spatialReference
-    re_name = str(in_features).replace('.shp', '_reprojected.shp')
-    in_features_re = arcpy.management.Project(str(in_features), out_dataset=re_name, out_coor_system=spatial_ref)
-    logger.debug(f"Feature class reprojected at {in_features_re} to crs {spatial_ref.name}")
+
+    if spatial_ref.name != arcpy.Describe(str(features)).spatialReference.name:
+        re_name = Path(out_dir, "features_reprojected.shp")
+        features = arcpy.management.Project(str(features), out_dataset=str(re_name), out_coor_system=spatial_ref)
+        logger.debug(f"Feature class reprojected at {features} to crs {spatial_ref.name}")
 
     # Run FeatureSolarRadiation
     srad = arcpy.sa.FeatureSolarRadiation(
         in_surface_raster=dem,
-        in_features=str(in_features_re),
+        in_features=str(features),
         out_table=str( Path(out_dir, "solar_radiation.dbf") ),
-        unique_id_field="ID",
+        unique_id_field=unique_id_field,
         time_zone="UTC",
         start_date_time=start,
         end_date_time=end,
@@ -107,13 +111,18 @@ def feature_insolation(
         # out_join_layer=None
         #sunmap_grid_level=5
     )
-    logger.debug(f"FeatureSolarRadiation completed at {srad}")
+    logger.debug(f"FeatureSolarRadiation saved at {srad} with diffuse_proportion={diffuse_proportion} and transmittivity={transmittivity}")
 
     out_xlsx = Path(out_dir, "solar_radiation.xlsx")
     _ = arcpy.conversion.TableToExcel(srad, str(out_xlsx))
 
     # Read out the table
-    return(pd.read_excel(out_xlsx))
+    tbl = pd.read_excel(out_xlsx)
+    if unique_id_field == 'ID':
+        unique_id_field = 'Id'
+    tbl = tbl[[unique_id_field, "str_time", "global_ave", "direct_ave", "diff_ave", "dir_dur"]].rename(columns={"str_time": "date"})
+    tbl['date'] = pd.to_datetime(tbl['date'], format = '%Y-%m-%d')
+    return(tbl)
 
 def coords_to_shp(coords, crs, out):
 
@@ -132,3 +141,9 @@ def coords_to_shp(coords, crs, out):
             logger.debug(f"\t Feature {c} added")
 
     return(out)
+
+def aggregate_srad(tbl, p_len = 7, ts_start = datetime.datetime(2024, 1, 1), ts_end = datetime.datetime(2024, 12, 31)):
+    # TODO: make this more robust and dynamic for different frequencies
+    tbl_diss = tbl.set_index('date').resample('D')[tbl.select_dtypes("number").columns].ffill() / p_len
+    tbl_diss = tbl_diss.reindex(pd.date_range(ts_start, ts_end)).ffill()
+    return(tbl_diss.resample('MS').sum())
