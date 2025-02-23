@@ -23,13 +23,14 @@ logger = logging.getLogger(__name__)
 r = 100
 p = (642202.50, 5163856.06)
 crs = 25832
-area_select = 20
+#area_select = 20
 height = 7
 slope = 30
 aspect = 180
 efficiency = 0.15
 system_loss = 0.8
 price = 45 #ct/kWh
+area_optim = None
 consumption_tbl = 'data/power_consumption.xlsx'
 optim_file = 'data/optim/optim_result_2025_02_22_1443.csv'
 #################
@@ -83,62 +84,67 @@ insolation = feature_insolation(
 
 insolation_mon = insolation.set_index('date').resample('MS')[['global_ave']].sum()
 
-if consumption_tbl is not None:
-    power_cns = pd.read_excel(consumption_tbl, usecols = ['date', 'consumption'])
-    power_cns['date'] = pd.to_datetime(power_cns['date'], format = '%Y-%m-%d')
-    power_cns.set_index('date', inplace = True)
+power_cns = pd.read_excel(consumption_tbl, usecols = ['date', 'consumption'])
+power_cns['date'] = pd.to_datetime(power_cns['date'], format = '%Y-%m-%d')
+power_cns.set_index('date', inplace = True)
 
-    energy_tbl = insolation_mon.join(power_cns)
+energy_tbl = insolation_mon.join(power_cns)
 
-    #Plot results
-    fig, ax = plt.subplots(figsize = (12, 6))
-    ax.plot(energy_tbl["consumption"], label = "Consumption", color = 'black')
-    dict_production = {}
-    for area in [5, 10, 15, 20, 25, 30]:
+#Plot results
+fig, ax = plt.subplots(figsize = (12, 6))
+ax.plot(energy_tbl["consumption"], label = "Consumption", color = 'black')
+dict_production = {}
+dict_diff = {}
+for area in [5, 10, 15, 20, 25, 30]:
 
-        en_production = convert_solar_energy(
-            energy_tbl["global_ave"], efficiency=efficiency, system_loss=system_loss, area=area
-        )
-        en_diff = (energy_tbl["consumption"] - en_production).sum().round(2)
-        ax.plot(en_production, label = f"{area}m² ({en_diff}kWh)")
-        dict_production[area] = en_production
-        # en_production / energy_tbl["consumption"]
-
-    ax.legend()
-    ax.set_ylim(0, 750)
-
-    en_tot_ann = dict_production[area_select].sum().round(1)
-    monthly_energy = dict_production[area_select].round(2).to_dict()
-    monthly_consumption = energy_tbl["consumption"].round(2).to_dict()
-    kWp = area_select * efficiency
-
-    environment = Environment(loader=FileSystemLoader("templates/"))
-    template = environment.get_template("report.html")
-    content = template.render(
-        rep_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-        dem_resolution = r,
-        point_coordinates = p,
-        panel_area = area_select,
-        panel_height = height,
-        slope = slope,
-        aspect = aspect,
-        efficiency = efficiency,
-        system_loss = system_loss,
-        price_per_kwh = price,
-        total_annual_energy = en_tot_ann,
-        avoided_costs = ((en_tot_ann * price) / 100).round(1),
-        payback_time = np.nan,
-        kWp = kWp,
-        monthly_energy_chart = encode_plot(fig),
-        monthly_energy = monthly_energy,
-        monthly_consumption = monthly_consumption,
-        total_consumption = energy_tbl["consumption"].sum(),
-        total_generation = en_tot_ann,
-        gen_cons = (en_tot_ann - energy_tbl["consumption"].sum()).round(2),
-        gen_cons_div = (en_tot_ann / energy_tbl["consumption"].sum()).round(2),
+    en_production = convert_solar_energy(
+        energy_tbl["global_ave"], efficiency=efficiency, system_loss=system_loss, area=area
     )
+    en_diff = (energy_tbl["consumption"] - en_production).sum().round(2)
+    ax.plot(en_production, label = f"{area}m² ({en_diff}kWh)")
+    dict_production[area] = en_production
+    dict_diff[area] = en_diff
 
-    report_time = datetime.datetime.now().strftime('%Y_%m_%d_%H%M')
-    out_report = Path("data", "results", f'{report_time}.html')
-    with open(out_report, mode="w", encoding="utf-8") as report:
-        report.write(content)
+ax.legend()
+ax.set_ylim(0, 750)
+
+if area_optim is None:
+    area_optim = [i for i in dict_diff.keys() if dict_diff[i] == min(np.abs(list(dict_diff.values())))][0]
+
+en_tot_ann = dict_production[area_optim].sum().round(1)
+monthly_energy = dict_production[area_optim].round(2).to_dict()
+monthly_consumption = energy_tbl["consumption"].round(2).to_dict()
+
+environment = Environment(loader=FileSystemLoader("templates/"))
+template = environment.get_template("report.html")
+content = template.render(
+    rep_date=datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+    dem_resolution = r,
+    point_coordinates = p,
+    panel_height = height,
+    slope = slope,
+    aspect = aspect,
+    efficiency = efficiency,
+    system_loss = system_loss,
+    price_per_kwh = price,
+
+    monthly_energy_chart = encode_plot(fig),
+
+    area_optim = area_optim,
+    kWp = area_optim * efficiency,
+    total_annual_energy = en_tot_ann,
+    total_annual_consumption = energy_tbl["consumption"].sum(),
+    avoided_costs = ((en_tot_ann * price) / 100).round(1),
+
+    monthly_energy = monthly_energy,
+    monthly_consumption = monthly_consumption,
+    total_consumption = energy_tbl["consumption"].sum(),
+    total_generation = en_tot_ann,
+    gen_cons = (en_tot_ann - energy_tbl["consumption"].sum()).round(2),
+    gen_cons_div = (en_tot_ann / energy_tbl["consumption"].sum()).round(2)*100,
+)
+
+report_time = datetime.datetime.now().strftime('%Y_%m_%d_%H%M')
+out_report = Path("data", "results", f'{report_time}.html')
+with open(out_report, mode="w", encoding="utf-8") as report:
+    report.write(content)

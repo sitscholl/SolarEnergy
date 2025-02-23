@@ -44,10 +44,6 @@
         <td>{{ point_coordinates }}</td>
       </tr>
       <tr>
-        <th>Panel Area</th>
-        <td>{{ panel_area }}m²</td>
-      </tr>
-      <tr>
         <th>Panel Height</th>
         <td>{{ panel_height }}m</td>
       </tr>
@@ -73,31 +69,6 @@
       </tr>
     </table>
 
-    <!-- Results Section -->
-    <div class="section-title">
-      <h2>Results</h2>
-    </div>
-    <div class="row">
-      <div class="col-md-6">
-        <p>Total Annual Energy Generated:</p>
-        <p class="result-value">{{ total_annual_energy }} kWh</p>
-      </div>
-      <div class="col-md-6">
-        <p>Total Annual Value:</p>
-        <p class="result-value">{{ avoided_costs }} €</p>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-md-6">
-        <p>Estimated Payback Time:</p>
-        <p class="result-value">{{ payback_time }} years</p>
-      </div>
-      <div class="col-md-6">
-        <p>kWp:</p>
-        <p class="result-value">{{ kWp }} kW</p>
-      </div>
-    </div>
-
     <!-- Monthly Energy Generation Section -->
     <div class="section-title">
       <h2>Monthly Energy Generation</h2>
@@ -106,6 +77,33 @@
       <img src="data:image/png;base64, {{ monthly_energy_chart }}" alt="Monthly Energy Generation Chart" class="img-fluid">
     </div>
 
+        <!-- Results Section -->
+        <div class="section-title">
+          <h2>Results</h2>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <p>Panel Area:</p>
+            <p class="result-value">{{ area_optim }} m²</p>
+          </div>
+          <div class="col-md-6">
+            <p>kWp:</p>
+            <p class="result-value">{{ kWp }} kW</p>
+          </div>
+          <div class="col-md-6">
+            <p>Total Annual Energy Generated:</p>
+            <p class="result-value">{{ total_annual_energy }} kWh</p>
+          </div>
+          <div class="col-md-6">
+            <p>Total Annual Energy Consumed:</p>
+            <p class="result-value">{{ total_annual_consumption }} kWh</p>
+          </div>
+          <div class="col-md-6">
+            <p>Total Annual Value:</p>
+            <p class="result-value">{{ avoided_costs }} €</p>
+          </div>
+        </div>
+   
     <!-- Monthly Energy Comparison Section -->
     <div class="section-title">
       <h2>Monthly Energy Comparison</h2>
