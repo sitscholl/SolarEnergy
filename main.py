@@ -23,9 +23,8 @@ logger = logging.getLogger(__name__)
 r = 100
 p = (642202.50, 5163856.06)
 crs = 25832
-#area_select = 20
 height = 7
-slope = 30
+slope = 0
 aspect = 180
 efficiency = 0.15
 system_loss = 0.8
@@ -109,7 +108,7 @@ ax.legend()
 ax.set_ylim(0, 750)
 
 if area_optim is None:
-    area_optim = [i for i in dict_diff.keys() if dict_diff[i] == min(np.abs(list(dict_diff.values())))][0]
+    area_optim = [i for i in dict_diff.keys() if np.abs(dict_diff[i]) == min(np.abs(list(dict_diff.values())))][0]
 
 en_tot_ann = dict_production[area_optim].sum().round(1)
 monthly_energy = dict_production[area_optim].round(2).to_dict()
