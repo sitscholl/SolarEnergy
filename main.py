@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
-from src.solar import feature_insolation
-from src.transformation import convert_solar_energy
-from src.plot import encode_plot
-from src.optim import get_optim_values, test_parameters, load_monthly_radiation
+import src
 from tempfile import TemporaryDirectory
 from pathlib import Path
 import datetime
@@ -24,8 +21,8 @@ r = 100
 p = (642202.50, 5163856.06)
 crs = 25832
 height = 7
-slope = 0
-aspect = 180
+slope = 30
+aspect = 270
 efficiency = 0.15
 system_loss = 0.8
 price = 45 #ct/kWh
@@ -42,7 +39,7 @@ if optim_file is None:
     logger.info('Optimizing parameters')
     import arcpy
     files = list(Path('data/optim').glob('*.csv'))
-    observed_srad = load_monthly_radiation(files)
+    observed_srad = src.load_monthly_radiation(files)
 
     province_shp = 'data/optim/stations_province.shp'
     features_optim = arcpy.management.Project(
@@ -51,23 +48,23 @@ if optim_file is None:
         out_coor_system=arcpy.Describe(dem_p).spatialReference,
     )
 
-    optim_tbl = test_parameters(
+    optim_tbl = src.test_parameters(
         dem_p,
         str(features_optim),
         observed_srad,
         step=0.1,
         out=f"data/optim/optim_result_{datetime.datetime.now():%Y_%m_%d_%H%M}.csv",
     )
-    t_opt, d_opt = get_optim_values(optim_tbl, metric = 'rmse')
+    t_opt, d_opt = src.get_optim_values(optim_tbl, metric = 'rmse')
 else:
     logger.info(f'Using optimized parameters from {optim_file}')
-    t_opt, d_opt = get_optim_values(pd.read_csv(optim_file), metric="rmse")
+    t_opt, d_opt = src.get_optim_values(pd.read_csv(optim_file), metric="rmse")
 # optim_lines(optim_tbl, observed_srad, '19300MS', t_opt, d_opt)
 
 
 out_dir = Path(TemporaryDirectory().name)
 out_dir.mkdir(exist_ok = True, parents = True)
-insolation = feature_insolation(
+insolation = src.feature_insolation(
     dem=dem_p,
     features=[p],
     crs=crs,
@@ -96,7 +93,7 @@ dict_production = {}
 dict_diff = {}
 for area in [5, 10, 15, 20, 25, 30]:
 
-    en_production = convert_solar_energy(
+    en_production = src.convert_solar_energy(
         energy_tbl["global_ave"], efficiency=efficiency, system_loss=system_loss, area=area
     )
     en_diff = (energy_tbl["consumption"] - en_production).sum().round(2)
@@ -127,7 +124,7 @@ content = template.render(
     system_loss = system_loss,
     price_per_kwh = price,
 
-    monthly_energy_chart = encode_plot(fig),
+    monthly_energy_chart = src.encode_plot(fig),
 
     area_optim = area_optim,
     kWp = area_optim * efficiency,
