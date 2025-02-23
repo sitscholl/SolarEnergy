@@ -22,9 +22,9 @@ p = (642202.50, 5163856.06)
 crs = 25832
 height = 7
 slope = 30
-aspect = 270
-efficiency = 0.15
-system_loss = 0.8
+aspect = 180
+efficiency = (0.15, 0.2)
+system_loss = (0.75, 0.9)
 price = 45 #ct/kWh
 area_optim = None
 consumption_tbl = 'data/power_consumption.xlsx'
@@ -86,19 +86,31 @@ power_cns.set_index('date', inplace = True)
 
 energy_tbl = insolation_mon.join(power_cns)
 
-#Plot results
+# Plot results
 fig, ax = plt.subplots(figsize = (12, 6))
 ax.plot(energy_tbl["consumption"], label = "Consumption", color = 'black')
 dict_production = {}
 dict_diff = {}
 for area in [5, 10, 15, 20, 25, 30]:
 
-    en_production = src.convert_solar_energy(
-        energy_tbl["global_ave"], efficiency=efficiency, system_loss=system_loss, area=area
+    # en_production = src.convert_solar_energy(
+    #     energy_tbl["global_ave"], efficiency=efficiency, system_loss=system_loss, area=area
+    # )
+    qntl = src.sample_solar_energy(
+        srad = energy_tbl["global_ave"],
+        eff_low=0.15,
+        eff_high=0.20,
+        loss_low=0.75,
+        loss_high=0.9,
+        area=area,
+        n=10000,
     )
-    en_diff = (energy_tbl["consumption"] - en_production).sum().round(2)
-    ax.plot(en_production, label = f"{area}m² ({en_diff}kWh)")
-    dict_production[area] = en_production
+
+    en_diff = (energy_tbl["consumption"] - qntl[1]).sum().round(2)
+    ax.plot(energy_tbl["consumption"].index, qntl[1], label = f"{area}m² ({en_diff}kWh)")
+    ax.fill_between(energy_tbl["consumption"].index, qntl[0], qntl[2], alpha=0.2, color="grey")
+
+    dict_production[area] = qntl[1]
     dict_diff[area] = en_diff
 
 ax.legend()
@@ -108,7 +120,7 @@ if area_optim is None:
     area_optim = [i for i in dict_diff.keys() if np.abs(dict_diff[i]) == min(np.abs(list(dict_diff.values())))][0]
 
 en_tot_ann = dict_production[area_optim].sum().round(1)
-monthly_energy = dict_production[area_optim].round(2).to_dict()
+monthly_energy = dict(zip(energy_tbl["consumption"].index, dict_production[area_optim].round(2)))
 monthly_consumption = energy_tbl["consumption"].round(2).to_dict()
 
 environment = Environment(loader=FileSystemLoader("templates/"))
@@ -127,7 +139,7 @@ content = template.render(
     monthly_energy_chart = src.encode_plot(fig),
 
     area_optim = area_optim,
-    kWp = area_optim * efficiency,
+    kWp = area_optim * np.mean(efficiency),
     total_annual_energy = en_tot_ann,
     total_annual_consumption = energy_tbl["consumption"].sum(),
     avoided_costs = ((en_tot_ann * price) / 100).round(1),

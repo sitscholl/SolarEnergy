@@ -47,9 +47,18 @@ def convert_solar_energy(srad, efficiency = 0.15, system_loss = 0.8, area = None
     if kWp is not None:
         area = kWp / (1 * efficiency)
 
-    out = srad * area * efficiency * system_loss
+    return srad * area * efficiency * system_loss
 
-    return(out)
+def sample_solar_energy(srad, eff_low, eff_high, loss_low, loss_high, area, n=100000):
+
+    results = np.array([[]]*len(srad))
+    for _ in range(n):
+        #_rad = np.clip(np.random.normal(srad, srad*0.1), a_min = 0, a_max = np.inf)
+        _eff = np.random.uniform(eff_low, eff_high)
+        _loss = np.random.uniform(loss_low, loss_high)
+        results = np.append(results, convert_solar_energy(srad.values, _eff, _loss, area).reshape(-1, 1), axis = 1)
+
+    return np.percentile(results, [5, 50, 95], axis = 1)
 
 def _solar_to_el_2(srad, system_size, performance_ratio=0.8):
     """
