@@ -24,7 +24,7 @@ height = 7
 slope = 30
 aspect = 180
 efficiency = (0.15, 0.2)
-system_loss = (0.75, 0.9)
+system_loss = (0.75, 0.85)
 price = 45 #ct/kWh
 area_optim = None
 consumption_tbl = 'data/power_consumption.xlsx'
@@ -107,8 +107,10 @@ for area in [5, 10, 15, 20, 25, 30]:
     )
 
     en_diff = (energy_tbl["consumption"] - qntl[1]).sum().round(2)
-    ax.plot(energy_tbl["consumption"].index, qntl[1], label = f"{area}m² ({en_diff}kWh)")
-    ax.fill_between(energy_tbl["consumption"].index, qntl[0], qntl[2], alpha=0.2, color="grey")
+    ln = ax.plot(energy_tbl["consumption"].index, qntl[1], label = f"{area}m² ({en_diff}kWh)")
+    #ax.fill_between(energy_tbl["consumption"].index, qntl[0], qntl[2], alpha=0.2, color="grey")
+    ax.plot(energy_tbl["consumption"].index, qntl[0], ls = '--', color = ln[-1].get_color(), alpha = .5, lw = .7)
+    ax.plot(energy_tbl["consumption"].index, qntl[2], ls = '--', color = ln[-1].get_color(), alpha = .5, lw = .7)
 
     dict_production[area] = qntl[1]
     dict_diff[area] = en_diff
@@ -139,7 +141,7 @@ content = template.render(
     monthly_energy_chart = src.encode_plot(fig),
 
     area_optim = area_optim,
-    kWp = area_optim * np.mean(efficiency),
+    kWp = f"{area_optim * efficiency[0]:.2f} - {area_optim * efficiency[1]:.2f}",
     total_annual_energy = en_tot_ann,
     total_annual_consumption = energy_tbl["consumption"].sum(),
     avoided_costs = ((en_tot_ann * price) / 100).round(1),
@@ -149,7 +151,7 @@ content = template.render(
     total_consumption = energy_tbl["consumption"].sum(),
     total_generation = en_tot_ann,
     gen_cons = (en_tot_ann - energy_tbl["consumption"].sum()).round(2),
-    gen_cons_div = (en_tot_ann / energy_tbl["consumption"].sum()).round(2)*100,
+    gen_cons_div = ((en_tot_ann / energy_tbl["consumption"].sum())*100).round(2),
 )
 
 report_time = datetime.datetime.now().strftime('%Y_%m_%d_%H%M')
