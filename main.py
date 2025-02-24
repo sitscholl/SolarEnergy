@@ -21,8 +21,8 @@ r = 100
 p = (642202.50, 5163856.06)
 crs = 25832
 height = 7
-slope = 30
-aspect = 180
+slope = 15
+aspect = 270
 efficiency = (0.15, 0.2)
 system_loss = (0.75, 0.85)
 price = 45 #ct/kWh
@@ -154,7 +154,7 @@ content = template.render(
     gen_cons_div = ((en_tot_ann / energy_tbl["consumption"].sum())*100).round(2),
 )
 
-report_time = datetime.datetime.now().strftime('%Y_%m_%d_%H%M')
+report_time = datetime.datetime.now().strftime('%Y_%m_%d_%H%M%S')
 out_report = Path("data", "results", f'{report_time}.html')
 with open(out_report, mode="w", encoding="utf-8") as report:
     report.write(content)
