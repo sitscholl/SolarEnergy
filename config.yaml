@@ -1,0 +1,45 @@
+location: [642202.50, 5163856.06]
+crs: 25832
+dem_resolution: 100
+price: 45 #ct/kWh
+area_optim:
+
+consumption_tbl: 'data/power_consumption.xlsx'
+optim_file: 'data/optim/optim_result_2025_02_22_1443.csv'
+
+#20000 / 400
+#20000 / 440
+panels:
+  south: 
+    height: 7
+    slope: 15
+    aspect: 270
+    efficiency: [0.15, 0.2]
+    system_loss: [0.75, 0.85]
+
+logging:
+    version: 1
+    disable_existing_loggers: false
+    formatters: 
+        standard:
+            format: "%(asctime)s - %(levelname)s - %(filename)s: %(message)s"
+            datefmt: "%Y-%m-%d %H:%M:%S"
+    handlers:
+        console:
+            class: logging.StreamHandler
+            formatter: standard
+            level: DEBUG
+            stream: ext://sys.stdout
+        file:
+            class: logging.handlers.RotatingFileHandler
+            formatter: standard
+            level: DEBUG
+            filename: ./data/log.log #path where to store the log file
+            mode: a
+            encoding: utf-8
+            maxBytes: 50000000 #50MB
+            backupCount: 4
+    loggers:
+        root:
+            handlers: [console, file]
+            level: DEBUG
