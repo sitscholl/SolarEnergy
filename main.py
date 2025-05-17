@@ -48,13 +48,11 @@ if config.get('optim_file') is None:
         step=0.1,
         out=f"data/optim/optim_result_{datetime.datetime.now():%Y_%m_%d_%H%M}.csv",
     )
-    t_opt, d_opt = src.get_optim_values(optim_tbl, metric = 'rmse')
+    optim_results = OptimizationResults(optim_tbl)
 else:
     logger.info(f'Using optimized parameters from {config.get("optim_file")}')
-    ##TODO: get monthly optimized values and not singe value for whole year
     optim_results = OptimizationResults(config.get('optim_file'))
 # optim_lines(optim_tbl, observed_srad, '19300MS', t_opt, d_opt)
-
 
 out_dir = Path(TemporaryDirectory().name)
 out_dir.mkdir(exist_ok = True, parents = True)
@@ -66,8 +64,7 @@ insolation = src.feature_insolation(
     feature_offset=config['panels']['south']['height'],
     feature_slope=config['panels']['south']['slope'],
     feature_aspect=config['panels']['south']['aspect'],
-    transmittivity=t_opt,
-    diffuse_proportion=d_opt,
+    optimization_results = optim_results,
     interval_unit="DAY",
     interval=1
 )
