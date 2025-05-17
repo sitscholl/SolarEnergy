@@ -11,6 +11,7 @@ import logging.config
 import yaml
 
 import src
+from src.optim import OptimizationResults
 
 ## Open Config 
 with open("config.yaml", 'r') as f:
@@ -51,7 +52,7 @@ if config.get('optim_file') is None:
 else:
     logger.info(f'Using optimized parameters from {config.get("optim_file")}')
     ##TODO: get monthly optimized values and not singe value for whole year
-    t_opt, d_opt = src.get_optim_values(pd.read_csv(config.get('optim_file')), metric="rmse")
+    optim_results = OptimizationResults(config.get('optim_file'))
 # optim_lines(optim_tbl, observed_srad, '19300MS', t_opt, d_opt)
 
 

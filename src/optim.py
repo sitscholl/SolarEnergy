@@ -91,6 +91,24 @@ def test_parameters(dem, province_shp, observed_srad, step = .1, out = None):
         
         return tbl_error
 
+class OptimizationResults:
+
+    def __init__(self, optim_tbl):
+        self.optim_tbl = pd.read_csv(optim_tbl)
+
+        self.optim_tbl['date'] = pd.to_datetime(self.optim_tbl['date'], format = '%Y-%m-%d')
+
+        if 'month' not in self.optim_tbl.columns:
+            self.optim_tbl['month'] = self.optim_tbl['date'].dt.month
+
+    def get_monthly_parameters(self, month: int, metric: str = 'rmse'):
+        error_tbl = self.optim_tbl.loc[self.optim_tbl['month'] == month, ['transmittivity', 'diffuse_proportion', metric]]
+        error_tbl = error_tbl.groupby(['transmittivity', 'diffuse_proportion'])[metric].mean()
+        t_opt, d_opt = error_tbl.sort_values().index[0]
+
+        return t_opt, d_opt
+
+    
 def get_optim_values(optim_tbl, metric = 'rmse'):
     error_tbl = optim_tbl[['transmittivity', 'diffuse_proportion', metric]].drop_duplicates().reset_index(drop = True)
     t_opt, d_opt = error_tbl.sort_values(metric)[['transmittivity', 'diffuse_proportion']].iloc[0]
