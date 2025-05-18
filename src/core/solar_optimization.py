@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
+from pandas import Series
 
-from tempfile import TemporaryDirectory
 from itertools import product
-import datetime
+from pathlib import Path
 import logging
 
 from .solar_calculator import SolarCalculator
@@ -24,7 +24,7 @@ class ParameterOptimizer:
                 logger.warning(f"Loading error table failed with error: {e}")
                 self.error_tbl = None
 
-    def _error_function(self, params):
+    def _error_function(self, params: tuple[float,float], dem: str, observed_srad: Series):
         transmittivity, diffuse_proportion = params
 
         optim_config = self.config.copy()
@@ -57,13 +57,15 @@ class ParameterOptimizer:
 
         return modeled_srad, rmse, mae
 
-    def optimize(self, step: float = .1, out: str | Path | None = None):
+    def optimize(self, dem: str, observations: str, step: float = .1, out: str | Path | None = None):
         trans_vals = np.arange(.3, .9, step)
         diff_vals = np.arange(.1, .7, step)
+
+        observations = load_monthly_radiation(list(Path(observations).glob('*.csv')))
         
         tbl_error = []
         for params in product(trans_vals, diff_vals):
-            modeled_srad, rmse, mae = radiation_error(params, dem, province_shp, out_dir, observed_srad)
+            modeled_srad, rmse, mae = self._error_function(params, dem, observations)
             _tbl = modeled_srad.to_frame()
             _tbl['transmittivity'] = params[0]
             _tbl['diffuse_proportion'] = params[1]
