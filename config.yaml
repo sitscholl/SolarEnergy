@@ -1,6 +1,6 @@
 location: [642202.50, 5163856.06]
 crs: 25832
-dem_resolution: 100
+dem: data/dem100m.tif
 price: 45 #ct/kWh
 area_optim:
 
