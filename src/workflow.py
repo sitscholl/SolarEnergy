@@ -23,11 +23,10 @@ class Workflow:
 
         ##TODO: include province_shp into optimizer to optimize against correct points
         ##TODO: get monthly optimized values and not singe value for whole year
-        optimizer = ParameterOptimizer(self.config)
-        if optimizer.error_tbl is None:
-            optimizer.optimize(dem=self.config['dem'], observation_dir = self.config['optimization']['optim_dir'])
-        
         calculator = SolarCalculator(self.config)
-        srad = calculator.calculate_radiation(dem = self.config['dem'], optimizer=optimizer)
+        if calculator.error_tbl is None:
+            calculator.optimize(dem=self.config['dem'], observation_dir = self.config['optimization']['optim_dir'])
+        
+        srad = calculator.calculate_radiation(dem = self.config['dem'])
 
         data = EnergyTable(srad, consumption)
