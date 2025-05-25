@@ -14,12 +14,22 @@ class ConsumptionSchema(pa.DataFrameModel):
 
 class IncomingRadiationSchema(pa.DataFrameModel):
     date: datetime = pa.Field()
+    panel: str = pa.Field()
     srad: float = pa.Field(ge=0)
 
 
 class Report:
 
-    def __init__(self, srad: pd.Series, consumption: pd.Series | None = None):
+    def __init__(
+        self,
+        srad: pd.Series,
+        panel_config: dict,
+        consumption: pd.Series | None = None,
+        efficiency=0.15,
+        system_loss=0.8,
+        area=None,
+        kWp=None,
+    ):
         IncomingRadiationSchema.validate(srad)
         self.srad = srad.set_index('date')
 
@@ -35,6 +45,11 @@ class Report:
                 consumption = consumption.resample(production_freq).mean()
 
         self.consumption = consumption
+        self.production = self.srad.apply(
+            lambda x: self.solar_energy_to_electric_energy(
+                x['srad'], efficiency=efficiency, system_loss=system_loss, area=panel_config[x['panel']['area']], kWp=None
+            ), axis = 1
+        )
 
     def solar_energy_to_electric_energy(
         srad, efficiency=0.15, system_loss=0.8, area=None, kWp=None
@@ -87,14 +102,23 @@ class Report:
 
         return srad * area * efficiency * system_loss
 
-    def calculate_energy_efficiency(self, freq = 'M'):
-        pass
+    @property
+    def total_radiation(self):
+        return self.srad.sum()
 
-    def calculate_energy_surplus(self, freq = 'M'):
-        pass
+    @property
+    def total_consumption(self):
+        return self.consumption.sum()
 
-    def calculate_energy_savings(self, freq = 'M'):
-        pass
+    @property
+    def total_production(self):
+        return self.production.sum()
+
+    def energy_efficiency(self, freq = 'M'):
+        return self.total_production / self.total_radiation()
+
+    def energy_balance(self, freq = 'M'):
+        return self.total_production - self.total_consumption
 
     def plot(self):
 

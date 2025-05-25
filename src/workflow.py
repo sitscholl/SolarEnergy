@@ -1,9 +1,8 @@
 import datetime
 import uuid
 
-from .core.solar_optimization import ParameterOptimizer
 from .core.solar_calculator import SolarCalculator
-from .core.energy_table import EnergyTable
+from .visualization.report import Report
 
 class Workflow:
 
@@ -29,4 +28,4 @@ class Workflow:
         
         srad = calculator.calculate_radiation(dem = self.config['dem'])
 
-        data = EnergyTable(srad, consumption)
+        data = Report(srad, consumption)
