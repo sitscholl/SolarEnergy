@@ -95,8 +95,8 @@
     <h3>Monthly Energy Generation</h3>
     
     <div class="plot-container">
-        {% if monthly_plot_url %}
-            <img src="{{ monthly_plot_url }}" alt="Monthly Energy Generation Plot">
+        {% if monthly_plot %}
+            <img src="data:image/png;base64, {{ monthly_plot }}" alt="Monthly Energy Generation Chart" class="img-fluid">
         {% else %}
             <div class="plot-placeholder">
                 <p>Plot will be generated when data is available</p>

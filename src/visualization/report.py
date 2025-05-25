@@ -6,6 +6,8 @@ from jinja2 import Environment, FileSystemLoader
 import logging
 from datetime import datetime
 
+from .plot import encode_plot
+
 logger = logging.getLogger(__name__)
 
 ## Dataframe validation
@@ -51,6 +53,7 @@ class Report:
                 x['srad'], efficiency=efficiency, system_loss=system_loss, area=panel_config[x['panel']['area']], kWp=None
             ), axis = 1
         )
+        self.production.rename(columns = {'srad': 'production'}, inplace = True)
 
         self.panel_config = panel_config
 
@@ -127,16 +130,40 @@ class Report:
     def energy_balance(self, freq = 'M'):
         return self.total_production - self.total_consumption
 
-    def plot(self):
+    def plot(self, encode: bool = False):
 
-        fig, ax = plt.subplots(figsize = (12, 6))
+        fig, ax = plt.subplots(figsize = (12, 7))
+
+        # Plot production lines on the first y-axis
+        sns.lineplot(
+            data=self.production,
+            x='date',
+            y='production',
+            hue='panel',
+            marker='o',
+            linewidth=2.5,
+            ax=ax
+        )
 
         if self.consumption is not None:
             ax.plot(self.consumption, label = "Consumption", color = 'black')
-        ax.plot(self.production, label = "Production", color = 'red')
+            sns.lineplot(
+                data=self.consumption,
+                x='date',
+                y='consumption',
+                color='black',
+                marker='s',
+                linewidth=3,
+                linestyle='--',
+                label='Consumption',
+            )
 
         ax.legend()
         ax.set_ylim(0, 750)
+
+        if encode:
+            return encode_plot(fig)
+        return fig, ax
 
     def generate_report(self, template):
         
@@ -146,7 +173,7 @@ class Report:
 
             'panels': self.panel_config,
 
-            'monthly_plot_url': 'images/monthly_energy_plot.png',  # Path to your plot image
+            'monthly_plot': self.plot(encode = True),
             'panel_energy_totals': self.panel_production,
             "energy_metrics": {
                 'Total Energy Produced': (self.total_production, 'kWh'),
@@ -168,3 +195,5 @@ class Report:
         # Save the output to an HTML file
         with open(f'data/reports/report_{datetime.datetime.now():%Y_%m_%d_%H%M%S}.html', 'w', encoding='utf-8') as f:
             f.write(output)
+
+        logger.info('Report sucessfully generated!')
