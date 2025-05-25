@@ -1,15 +1,13 @@
-import arcpy
-from arcpy.sa import *
 import pandas as pd
 import numpy as np
 from pandas import Series
 
 from itertools import product
 from pathlib import Path
+from typing import Optional, Union
 import logging
 import tempfile
 
-from .solar_optimization import ParameterOptimizer
 from ..utils import coords_to_shp, load_monthly_radiation
 
 logger = logging.getLogger(__name__)
@@ -28,18 +26,21 @@ class SolarCalculator:
         self.panel_config = config["panels"]
         self.location = config['location']
         self.output_directory = config.get("output_directory", tempfile.TemporaryDirectory().name)
+        self.crs = config['crs']
         Path(self.output_directory).mkdir(exist_ok = True, parents = True)
 
-        if config["optimization"].get("optim_file") is None:
-            self.error_tbl = None
-        else:
+        optim_file = config["optimization"]["optim_file"]       
+        if optim_file is not None:
             try:
-                self.error_tbl = pd.read_csv(pd.read_csv(config["optimization"].get('optim_file')))
+                self.error_tbl = pd.read_csv(optim_file)
+                logger.info(f'Loaded optimized parameters from : {optim_file}')
             except Exception as e:
                 logger.warning(f"Loading error table failed with error: {e}")
                 self.error_tbl = None
+        else:
+            self.error_tbl = None
 
-    def calculate_radiation(self, dem: str, features: list[tuple] | None = None):
+    def calculate_radiation(self, dem: str, features: Optional[list[tuple]] = None):
         """
         Compute solar radiation for each feature in a feature class.
 
@@ -56,10 +57,16 @@ class SolarCalculator:
             A table with the solar radiation values for each feature.
         """
 
+        try:
+            import arcpy
+            #from arcpy.sa import *
+        except Exception as e:
+            raise ImportError("Error importing arcpy library. Make sure it is available in the current environment.")
+
         if features is None:
             features = self.location
         if isinstance(features, list):
-            features = coords_to_shp(features, crs = self.config["crs"], out = Path(self.output_directory, "features.shp"))
+            features = coords_to_shp([features], crs = self.crs, out = Path(self.output_directory, "features.shp"))
 
         spatial_ref = arcpy.Describe(dem).spatialReference
 
@@ -78,12 +85,13 @@ class SolarCalculator:
 
         # Run FeatureSolarRadiation
         tbl = []
+        unique_id_field = self.config.get('unique_id_field', 'ID')
         for panel_name, panel_attrs in self.panel_config.items():
             srad = arcpy.sa.FeatureSolarRadiation(
                 in_surface_raster=dem,
                 in_features=str(features),
                 out_table=str( Path(self.output_directory, f"solar_radiation_{panel_name}.dbf") ),
-                unique_id_field=self.config.get('unique_id_field', 'ID'),
+                unique_id_field=unique_id_field,
                 time_zone=self.config.get('time_zone', "UTC"),
                 start_date_time=self.config.get('start_date', "1/1/2024"),
                 end_date_time=self.config.get('end_date', "12/31/2024"),
@@ -103,12 +111,12 @@ class SolarCalculator:
             )
             logger.debug(
                 f"""FeatureSolarRadiation saved at {srad} with 
-                    diffuse_proportion={diffuse_proportion} and 
-                    transmittivity={transmittivity}
+                    diffuse_proportion={diffuse_proportion:.2f} and 
+                    transmittivity={transmittivity:.2f}
                     """
                     )
 
-            out_xlsx = Path(self.output_directory, f"solar_radiation_{panel_name}.xlsx")
+            out_xlsx = Path(Path().cwd(), self.output_directory, f"solar_radiation_{panel_name}.xlsx")
             _ = arcpy.conversion.TableToExcel(srad, str(out_xlsx))
 
             # Read out the table
@@ -116,14 +124,14 @@ class SolarCalculator:
             if unique_id_field == 'ID':
                 unique_id_field = 'Id'
             _tbl = _tbl[[unique_id_field, "str_time", "global_ave", "direct_ave", "diff_ave", "dir_dur"]].copy()
-            _tbl.rename(columns={"str_time": "date"}, inplace = True)
+            _tbl.rename(columns={"str_time": "date", 'global_ave': 'srad'}, inplace = True)
             _tbl['date'] = pd.to_datetime(_tbl['date'], format = '%Y-%m-%d')
             _tbl["panel"] = panel_name
 
             tbl.append(_tbl)
         return(pd.concat(tbl))
 
-    def _error_function(self, params: tuple[float,float], dem: str, observed_srad: Series, observation_coords: str | Path):
+    def _error_function(self, params: tuple[float,float], dem: str, observed_srad: Series, observation_coords: Union[str, Path]):
         transmittivity, diffuse_proportion = params
 
         if not (0.1 <= transmittivity <= 1.0 and 0.1 <= diffuse_proportion <= 1.0):
@@ -162,10 +170,10 @@ class SolarCalculator:
     def optimize(
         self,
         dem: str,
-        observation_dir: str | Path,
-        observation_coords: str | Path,
+        observation_dir: Union[str, Path],
+        observation_coords: Union[str, Path],
         step: float = 0.1,
-        out: str | Path | None = None,
+        out: Optional[str] = None,
     ):
         trans_vals = np.arange(0.3, 0.9, step)
         diff_vals = np.arange(.1, .7, step)
@@ -194,5 +202,5 @@ class SolarCalculator:
             raise ValueError(f"error_tbl is None! Optimize parameters first or load a precreated error_tbl by specifying a valid path in the config file.")
 
         aggregated_error = self.error_tbl.groupby(['transmittivity', 'diffuse_proportion'])[metric].mean()
-        t_opt, d_opt = aggregated_error.sort_values(metric).iloc[0]
+        t_opt, d_opt = aggregated_error.sort_values().index[0]
         return t_opt, d_opt

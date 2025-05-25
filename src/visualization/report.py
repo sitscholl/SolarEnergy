@@ -1,24 +1,26 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-import pandera.pandas as pa
+# import pandera.pandas as pa
 from jinja2 import Environment, FileSystemLoader
 
 import logging
 from datetime import datetime
+from typing import Optional
+from pathlib import Path
 
 from .plot import encode_plot
 
 logger = logging.getLogger(__name__)
 
 ## Dataframe validation
-class ConsumptionSchema(pa.DataFrameModel):
-    date: datetime = pa.Field()
-    consumption: float = pa.Field(ge=0)
+# class ConsumptionSchema(pa.DataFrameModel):
+#     date: datetime = pa.Field()
+#     consumption: float = pa.Field(ge=0)
 
-class IncomingRadiationSchema(pa.DataFrameModel):
-    date: datetime = pa.Field()
-    panel: str = pa.Field()
-    srad: float = pa.Field(ge=0)
+# class IncomingRadiationSchema(pa.DataFrameModel):
+#     date: datetime = pa.Field()
+#     panel: str = pa.Field()
+#     srad: float = pa.Field(ge=0)
 
 
 class Report:
@@ -27,38 +29,40 @@ class Report:
         self,
         srad: pd.Series,
         panel_config: dict,
-        consumption: pd.Series | None = None,
-        efficiency=0.15,
-        system_loss=0.8,
-        area=None,
-        kWp=None,
+        consumption: Optional[pd.Series] = None
     ):
-        IncomingRadiationSchema.validate(srad)
-        self.srad = srad.set_index('date')
+        # IncomingRadiationSchema.validate(srad)
+        self.srad = srad.set_index('date')[['panel', 'srad']]
 
         if consumption is not None:
-            ConsumptionSchema.validate(consumption)
+            # ConsumptionSchema.validate(consumption)
             consumption = consumption.set_index('date')
 
-            consumption_freq = consumption.index.dt.infer_freq()
-            production_freq = srad.index.dt.infer_freq()
+            consumption_freq = pd.infer_freq(consumption.index)
+            production_freq = pd.infer_freq(self.srad.index)
 
             if consumption_freq != production_freq:
                 logger.warning(f"Datetime frequency in production table does not match frequency in consumption table. Got {production_freq} vs {consumption_freq}. Resampling consumption data")
                 consumption = consumption.resample(production_freq).mean()
 
         self.consumption = consumption
-        self.production = self.srad.apply(
-            lambda x: self.solar_energy_to_electric_energy(
-                x['srad'], efficiency=efficiency, system_loss=system_loss, area=panel_config[x['panel']['area']], kWp=None
-            ), axis = 1
-        )
-        self.production.rename(columns = {'srad': 'production'}, inplace = True)
+        
+        production_tbls = []
+        for panel_name, panel_data in self.srad.groupby('panel'):
+            panel_data['production'] = self.solar_energy_to_electric_energy(
+                panel_data['srad'],
+                efficiency=panel_config[panel_name]['efficiency'],
+                system_loss=panel_config[panel_name]['system_loss'],
+                area=panel_config[panel_name]['area'],
+                kWp=None,
+            )
+            production_tbls.append(panel_data[['panel', 'production']])
+        self.production = pd.concat(production_tbls)
 
         self.panel_config = panel_config
 
     def solar_energy_to_electric_energy(
-        srad, efficiency=0.15, system_loss=0.8, area=None, kWp=None
+        self, srad, efficiency=0.15, system_loss=0.8, area=None, kWp=None
     ):
         """
         Convert solar radiation input into electricity output.
@@ -110,23 +114,25 @@ class Report:
 
     @property
     def total_radiation(self):
-        return self.srad.sum()
+        return self.srad['srad'].sum()
 
     @property
     def total_consumption(self):
-        return self.consumption.sum()
+        return self.consumption['consumption'].sum()
 
     @property
     def total_production(self):
-        return self.production.sum()
+        return self.production['production'].sum()
 
     @property
     def panel_production(self):
-        return self.production.groupby('panel').sum().to_dict()
+        return self.production.groupby('panel').sum().to_dict()['production']
 
+    @property
     def energy_efficiency(self, freq = 'M'):
         return self.total_production / self.total_radiation
 
+    @property
     def energy_balance(self, freq = 'M'):
         return self.total_production - self.total_consumption
 
@@ -165,15 +171,15 @@ class Report:
             return encode_plot(fig)
         return fig, ax
 
-    def generate_report(self, template):
-        
+    def generate_report(self, template_dir: str, report_dir: str):
+
         data = {
-            'report_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'report_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'location': 'Example Location',
 
             'panels': self.panel_config,
 
-            'monthly_plot': self.plot(encode = True),
+            #'monthly_plot': self.plot(encode = True),
             'panel_energy_totals': self.panel_production,
             "energy_metrics": {
                 'Total Energy Produced': (self.total_production, 'kWh'),
@@ -181,19 +187,21 @@ class Report:
                 'Total Radiation': (self.total_radiation, 'kWh'),
                 'Energy Balance': (self.energy_balance, 'kWh'),
                 'Energy Efficiency': (self.energy_efficiency, ''),
-                'Peak Power Output': (2.5, 'kW'),
+                'Peak Power Output': (0, 'kW'),
             }
         }
 
         # Configure Jinja2 environment
-        env = Environment(loader=FileSystemLoader('templates/'))  # Assumes templates are in the same directory
+        env = Environment(loader=FileSystemLoader(template_dir))
         template = env.get_template('main_template.html')
 
         # Render the template with the data
         output = template.render(data)
 
         # Save the output to an HTML file
-        with open(f'data/reports/report_{datetime.datetime.now():%Y_%m_%d_%H%M%S}.html', 'w', encoding='utf-8') as f:
+        out_report = Path(report_dir, f'report_{datetime.now():%Y_%m_%d_%H%M%S}.html')
+        Path(out_report.parent).mkdir(exist_ok = True, parents = True)
+        with open(out_report, mode="w", encoding='utf-8') as f:
             f.write(output)
 
         logger.info('Report sucessfully generated!')

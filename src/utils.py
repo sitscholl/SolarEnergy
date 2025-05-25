@@ -20,7 +20,7 @@ def coords_to_shp(coords, crs, out):
     with arcpy.da.InsertCursor(feature_class, ["SHAPE@"]) as cursor:
         for c in coords:
             cursor.insertRow([c])
-            logger.debug(f"\t Feature {c} added")
+            logger.debug(f"Feature {c} added")
 
     return(out)
 

@@ -2,7 +2,9 @@ location: [642202.50, 5163856.06]
 crs: 25832
 dem: data/dem100m.tif
 price: 45 #ct/kWh
-area_optim:
+#output_directory: data/output
+template_dir: templates/
+report_out: data/report
 
 consumption:
     consumption_tbl: 'data/power_consumption.xlsx'

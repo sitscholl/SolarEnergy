@@ -1,9 +1,14 @@
 import pandas as pd
+import yaml
 
 import datetime
+import logging
+import logging.config
 
 from .core.solar_calculator import SolarCalculator
 from .visualization.report import Report
+
+logger = logging.getLogger(__name__)
 
 class Workflow:
 
@@ -13,7 +18,25 @@ class Workflow:
 
     def load_config(self, config):
         ##TODO: implement validation of config file
+        try:
+            with open("config.yaml", 'r') as f:
+                config = yaml.safe_load(f)
+        except Exception as e:
+            raise ValueError(f'Error loading config file: {e}')
         self.config = config
+
+    def start_logging(self):
+        if self.config is None:
+            raise ValueError("Load a config file first before initializing logging.")
+
+        logging_config = self.config.get('logging')
+        if logging_config:
+            logging.config.dictConfig(logging_config)
+
+        logging.getLogger('ipykernel').setLevel(logging.WARNING)
+        logging.getLogger('positron_ipykernel').setLevel(logging.WARNING)
+
+        logger.info('Appliction started and logging initialized!')
 
     def run(self):
 
@@ -28,13 +51,18 @@ class Workflow:
                 dem=self.config["dem"],
                 observation_dir=self.config["optimization"]["optim_dir"],
                 observation_locs=self.config["optimization"]["optim_coords"],
+                out=self.config['optimization'].get('out')
             )
 
         srad = calculator.calculate_radiation(dem = self.config['dem'])
 
-        if self.config.get('consumption_tbl'):
-            consumption = pd.read_excel(self.config.get('consumption_tbl'), usecols = ['date', 'consumption'])
+        consumption_file = self.config['consumption'].get('consumption_tbl')
+        if consumption_file is not None:
+            consumption = pd.read_excel(consumption_file, usecols = ['date', 'consumption'])
             consumption["date"] = pd.to_datetime(consumption['date'], format = '%Y-%m-%d')
         else:
             consumption = None
-        data = Report(srad, consumption)
+
+        ## Generate Report
+        report = Report(srad, panel_config = self.config['panels'], consumption = consumption)
+        report.generate_report(self.config['template_dir'], self.config['report_out'])

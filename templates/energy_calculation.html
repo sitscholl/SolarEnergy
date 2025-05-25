@@ -64,7 +64,7 @@
                 <tr>
                     <th>{{ metric }}</th>
                     <td class="value">
-                        {{ value }}{% if unit %} {{ unit }}{% endif %}
+                        {{ value|round(2) }}{% if unit %} {{ unit }}{% endif %}
                     </td>
                 </tr>
             {% endfor %}

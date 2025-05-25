@@ -1,32 +1,23 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-from jinja2 import Environment, FileSystemLoader
-
-from tempfile import TemporaryDirectory
-from pathlib import Path
-import datetime
 import logging
-import logging.config
-import yaml
+import sys
 
-import src
+from src.workflow import Workflow
+
+logger = logging.getLogger(__name__)
 
 def main():
     # Load configuration
-    config_manager = ConfigurationManager("config/config.yaml")
+    workflow = Workflow()
+    workflow.load_config('config.yaml')
 
     # Setup logging
-    LoggerSetup.setup(config_manager.get_logging_config())
-
-    # Initialize pipeline
-    pipeline = SolarEnergyPipeline(config_manager)
+    workflow.start_logging()
 
     # Run analysis
     try:
-        pipeline.run()
-    except (SolarCalculationError, OptimizationError) as e:
-        logger.error(f"Analysis failed: {str(e)}")
+        workflow.run()
+    except Exception as e:
+        logger.error(f"Analysis failed: {str(e)}", exc_info=True)
         sys.exit(1)
 
 if __name__ == "__main__":
