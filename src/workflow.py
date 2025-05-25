@@ -1,5 +1,6 @@
+import pandas as pd
+
 import datetime
-import uuid
 
 from .core.solar_calculator import SolarCalculator
 from .visualization.report import Report
@@ -8,7 +9,6 @@ class Workflow:
 
     def __init__(self):
         self.workflow_time = datetime.datetime.now()
-        self.workflow_id = uuid.uuid4()
         self.config = None
 
     def load_config(self, config):
@@ -28,4 +28,9 @@ class Workflow:
         
         srad = calculator.calculate_radiation(dem = self.config['dem'])
 
+        if self.config.get('consumption_tbl'):
+            consumption = pd.read_excel(self.config.get('consumption_tbl'), usecols = ['date', 'consumption'])
+            consumption["date"] = pd.to_datetime(consumption['date'], format = '%Y-%m-%d')
+        else:
+            consumption = None
         data = Report(srad, consumption)

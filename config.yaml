@@ -15,13 +15,14 @@ optimization:
 #20000 / 400
 #20000 / 440
 panels:
-  south: 
-    area: 0
-    offset: 7
-    slope: 15
-    aspect: 270
-    efficiency: [0.15, 0.2]
-    system_loss: [0.75, 0.85]
+    south: 
+        area: 0
+        offset: 7
+        slope: 15
+        aspect: 270
+        efficiency: 0.15
+        system_loss: 0.8
+
 
 FeatureSolarRadiation:
     unique_id_field: ID

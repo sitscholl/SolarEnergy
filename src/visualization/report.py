@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import pandera.pandas as pa
+from jinja2 import Environment, FileSystemLoader
 
 import logging
 from datetime import datetime
@@ -50,6 +51,8 @@ class Report:
                 x['srad'], efficiency=efficiency, system_loss=system_loss, area=panel_config[x['panel']['area']], kWp=None
             ), axis = 1
         )
+
+        self.panel_config = panel_config
 
     def solar_energy_to_electric_energy(
         srad, efficiency=0.15, system_loss=0.8, area=None, kWp=None
@@ -114,8 +117,12 @@ class Report:
     def total_production(self):
         return self.production.sum()
 
+    @property
+    def panel_production(self):
+        return self.production.groupby('panel').sum().to_dict()
+
     def energy_efficiency(self, freq = 'M'):
-        return self.total_production / self.total_radiation()
+        return self.total_production / self.total_radiation
 
     def energy_balance(self, freq = 'M'):
         return self.total_production - self.total_consumption
@@ -132,4 +139,32 @@ class Report:
         ax.set_ylim(0, 750)
 
     def generate_report(self, template):
-        pass
+        
+        data = {
+            'report_date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'location': 'Example Location',
+
+            'panels': self.panel_config,
+
+            'monthly_plot_url': 'images/monthly_energy_plot.png',  # Path to your plot image
+            'panel_energy_totals': self.panel_production,
+            "energy_metrics": {
+                'Total Energy Produced': (self.total_production, 'kWh'),
+                'Total Energy Consumed': (self.total_consumption, 'kWh'),
+                'Total Radiation': (self.total_radiation, 'kWh'),
+                'Energy Balance': (self.energy_balance, 'kWh'),
+                'Energy Efficiency': (self.energy_efficiency, ''),
+                'Peak Power Output': (2.5, 'kW'),
+            }
+        }
+
+        # Configure Jinja2 environment
+        env = Environment(loader=FileSystemLoader('templates/'))  # Assumes templates are in the same directory
+        template = env.get_template('main_template.html')
+
+        # Render the template with the data
+        output = template.render(data)
+
+        # Save the output to an HTML file
+        with open(f'data/reports/report_{datetime.datetime.now():%Y_%m_%d_%H%M%S}.html', 'w', encoding='utf-8') as f:
+            f.write(output)
