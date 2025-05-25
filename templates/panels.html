@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .section {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 2em auto;
+            max-width: 800px;
+            background: #f9f9f9;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            padding: 2em;
+        }
+        .section h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 0.3em;
+            margin-bottom: 1.2em;
+        }
+        .panels-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5em;
+        }
+        .panel-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(44,62,80,0.08);
+            padding: 1.2em 1.5em;
+            flex: 1 1 320px;
+            min-width: 280px;
+            max-width: 350px;
+        }
+        .panel-card h4 {
+            color: #2980b9;
+            margin-top: 0;
+            margin-bottom: 0.8em;
+            font-size: 1.15em;
+        }
+        .panel-details {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0.5em;
+        }
+        .panel-details th, .panel-details td {
+            padding: 0.4em 0.7em;
+            text-align: left;
+        }
+        .panel-details th {
+            background: #ecf0f1;
+            color: #34495e;
+            font-weight: 600;
+        }
+        .panel-details tr:nth-child(even) td {
+            background: #f4f8fb;
+        }
+        .panel-details tr:nth-child(odd) td {
+            background: #fff;
+        }
+        .summary {
+            margin-top: 2em;
+            padding: 1em;
+            background: #eaf6ff;
+            border-radius: 8px;
+            color: #2d5c88;
+            font-size: 1.05em;
+        }
+        .summary strong {
+            color: #217dbb;
+        }
+        @media (max-width: 700px) {
+            .panels-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="section">
+    <h3>Solar Panel Configuration</h3>
+    {% if panels %}
+        <div class="panels-container">
+            {% for panel_name, panel in panels.items() %}
+                <div class="panel-card">
+                    <h4>{{ panel_name|title }} Panel</h4>
+                    <table class="panel-details">
+                        <tr>
+                            <th>Property</th>
+                            <th>Value</th>
+                        </tr>
+                        {% for property, value in panel.items() %}
+                            <tr>
+                                <td>{{ property|replace('_', ' ')|title }}</td>
+                                <td>
+                                    {{ value }}
+                                    {% if property == 'area' %} m²
+                                    {% elif property in ['offset', 'slope', 'aspect'] %} °
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="summary">
+            <p>Total number of panels: <strong>{{ panels|length }}</strong></p>
+            <p>Total panel area: <strong>{{ panels.values()|map(attribute='area')|sum }} m²</strong></p>
+        </div>
+    {% else %}
+        <p>No panel configurations found.</p>
+    {% endif %}
+</div>
+</body>
+</html>
