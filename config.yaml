@@ -10,6 +10,7 @@ consumption:
 optimization:
     optimize_params: true
     optim_dir: data/optim
+    optim_coords: data/optim/province.shp
     optim_file: 'data/optim/optim_result_2025_02_22_1443.csv'
 
 #20000 / 400

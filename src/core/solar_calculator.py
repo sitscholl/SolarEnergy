@@ -123,11 +123,13 @@ class SolarCalculator:
             tbl.append(_tbl)
         return(pd.concat(tbl))
 
-    def _error_function(self, params: tuple[float,float], dem: str, observed_srad: Series):
+    def _error_function(self, params: tuple[float,float], dem: str, observed_srad: Series, observation_coords: str | Path):
         transmittivity, diffuse_proportion = params
 
         if not (0.1 <= transmittivity <= 1.0 and 0.1 <= diffuse_proportion <= 1.0):
             return np.inf  # Penalize invalid values
+
+        optim_config['Location'] = observation_coords
 
         optim_config = self.config.copy()
         optim_config["optimization"]["optim_file"] = None
@@ -157,12 +159,19 @@ class SolarCalculator:
 
         return modeled_srad, rmse, mae
 
-    def optimize(self, dem: str, observations: str, step: float = .1, out: str | Path | None = None):
-        trans_vals = np.arange(.3, .9, step)
+    def optimize(
+        self,
+        dem: str,
+        observation_dir: str | Path,
+        observation_coords: str | Path,
+        step: float = 0.1,
+        out: str | Path | None = None,
+    ):
+        trans_vals = np.arange(0.3, 0.9, step)
         diff_vals = np.arange(.1, .7, step)
 
-        observations = load_monthly_radiation(list(Path(observations).glob('*.csv')))
-        
+        observations = load_monthly_radiation(list(Path(observation_dir).glob('*.csv')))
+
         tbl_error = []
         for params in product(trans_vals, diff_vals):
             modeled_srad, rmse, mae = self._error_function(params, dem, observations)
@@ -176,7 +185,7 @@ class SolarCalculator:
 
         if out is not None:
             tbl_error.to_csv(out)
-        
+
         self.error_tbl = tbl_error
 
     def get_optimized_values(self, metric = 'rmse'):

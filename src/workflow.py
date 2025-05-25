@@ -24,8 +24,12 @@ class Workflow:
         ##TODO: get monthly optimized values and not singe value for whole year
         calculator = SolarCalculator(self.config)
         if calculator.error_tbl is None:
-            calculator.optimize(dem=self.config['dem'], observation_dir = self.config['optimization']['optim_dir'])
-        
+            calculator.optimize(
+                dem=self.config["dem"],
+                observation_dir=self.config["optimization"]["optim_dir"],
+                observation_locs=self.config["optimization"]["optim_coords"],
+            )
+
         srad = calculator.calculate_radiation(dem = self.config['dem'])
 
         if self.config.get('consumption_tbl'):
