@@ -94,7 +94,8 @@
                                 <td>
                                     {{ value }}
                                     {% if property == 'area' %} m²
-                                    {% elif property in ['offset', 'slope', 'aspect'] %} °
+                                    {% elif property == 'offset' %} m
+                                    {% elif property in ['slope', 'aspect'] %} °
                                     {% endif %}
                                 </td>
                             </tr>

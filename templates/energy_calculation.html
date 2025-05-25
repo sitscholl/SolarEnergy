@@ -1,0 +1,76 @@
+<!-- energy_calculation_section.html -->
+<style>
+    .energy-section {
+        margin: 2em auto 0 auto;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(44,62,80,0.08);
+        padding: 1.5em 2em;
+        max-width: 350px;
+        min-width: 280px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .energy-section h2 {
+        color: #2980b9;
+        margin-top: 0;
+        margin-bottom: 1em;
+        font-size: 1.15em;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.3em;
+        width: 100%;
+        text-align: center;
+    }
+    .energy-metrics-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0.5em;
+    }
+    .energy-metrics-table th, .energy-metrics-table td {
+        padding: 0.4em 0.7em;
+        text-align: left;
+    }
+    .energy-metrics-table th {
+        background: #ecf0f1;
+        color: #34495e;
+        font-weight: 600;
+        width: 60%;
+    }
+    .energy-metrics-table tr:nth-child(even) td {
+        background: #f4f8fb;
+    }
+    .energy-metrics-table tr:nth-child(odd) td {
+        background: #fff;
+    }
+    .energy-metrics-table td.value {
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    @media (max-width: 700px) {
+        .energy-section {
+            max-width: 100%;
+            padding: 1em;
+        }
+    }
+</style>
+
+<div class="energy-section">
+    <h2>Energy Calculation Results</h2>
+    {% if energy_metrics %}
+        <table class="energy-metrics-table">
+            <tbody>
+            {% for metric, (value, unit) in energy_metrics.items() %}
+                <tr>
+                    <th>{{ metric }}</th>
+                    <td class="value">
+                        {{ value }}{% if unit %} {{ unit }}{% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No energy calculation metrics available.</p>
+    {% endif %}
+</div>

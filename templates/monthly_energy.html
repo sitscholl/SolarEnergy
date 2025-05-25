@@ -1,0 +1,134 @@
+<!-- monthly_energy_section.html -->
+<style>
+    .monthly-energy-section {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        margin: 2em auto;
+        max-width: 800px;
+        background: #f9f9f9;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        padding: 2em;
+    }
+    .monthly-energy-section h3 {
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.3em;
+        margin-bottom: 1.2em;
+    }
+    .plot-container {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(44,62,80,0.08);
+        padding: 1.2em;
+        margin-bottom: 2em;
+        text-align: center;
+    }
+    .plot-container img {
+        max-width: 100%;
+        height: auto;
+    }
+    .plot-placeholder {
+        height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #7f8c8d;
+        font-style: italic;
+        border: 1px dashed #bdc3c7;
+        border-radius: 4px;
+    }
+    .panel-totals {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(44,62,80,0.08);
+        padding: 1.2em 1.5em;
+        margin: 0 auto;
+        max-width: 500px;
+    }
+    .panel-totals h4 {
+        color: #2980b9;
+        margin-top: 0;
+        margin-bottom: 0.8em;
+        font-size: 1.15em;
+        text-align: center;
+    }
+    .totals-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 0.5em;
+    }
+    .totals-table th, .totals-table td {
+        padding: 0.4em 0.7em;
+        text-align: left;
+    }
+    .totals-table th {
+        background: #ecf0f1;
+        color: #34495e;
+        font-weight: 600;
+    }
+    .totals-table tr:nth-child(even) td {
+        background: #f4f8fb;
+    }
+    .totals-table tr:nth-child(odd) td {
+        background: #fff;
+    }
+    .totals-table td.energy-value {
+        font-weight: bold;
+        color: #2c3e50;
+        text-align: right;
+    }
+    .totals-table tr.total-row {
+        border-top: 2px solid #3498db;
+    }
+    .totals-table tr.total-row td {
+        font-weight: bold;
+        color: #2980b9;
+    }
+    @media (max-width: 700px) {
+        .monthly-energy-section {
+            padding: 1em;
+        }
+    }
+</style>
+
+<div class="monthly-energy-section">
+    <h3>Monthly Energy Generation</h3>
+    
+    <div class="plot-container">
+        {% if monthly_plot_url %}
+            <img src="{{ monthly_plot_url }}" alt="Monthly Energy Generation Plot">
+        {% else %}
+            <div class="plot-placeholder">
+                <p>Plot will be generated when data is available</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="panel-totals">
+        <h4>Total Energy Generated Per Panel</h4>
+        {% if panel_energy_totals %}
+            <table class="totals-table">
+                <thead>
+                    <tr>
+                        <th>Panel</th>
+                        <th>Total Energy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for panel_name, energy in panel_energy_totals.items() %}
+                        <tr>
+                            <td>{{ panel_name|title }}</td>
+                            <td class="energy-value">{{ energy }} kWh</td>
+                        </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td>Total</td>
+                        <td class="energy-value">{{ panel_energy_totals.values()|sum }} kWh</td>
+                    </tr>
+                </tbody>
+            </table>
+        {% else %}
+            <p>No energy generation data available.</p>
+        {% endif %}
+    </div>
+</div>
