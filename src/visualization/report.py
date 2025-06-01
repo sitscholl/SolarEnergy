@@ -140,46 +140,55 @@ class Report:
 
         fig, ax = plt.subplots(figsize = (12, 7))
 
-        # Plot production lines on the first y-axis
-        sns.lineplot(
-            data=self.production,
-            x='date',
-            y='production',
-            hue='panel',
-            marker='o',
-            linewidth=2.5,
-            ax=ax
-        )
+        # Define distinct colors for panels
+        panel_colors = plt.cm.tab10
+        
+        # Plot production lines for each panel with distinct colors
+        panel_names = self.production['panel'].unique()
+        for i, panel_name in enumerate(panel_names):
+            panel_data = self.production[self.production['panel'] == panel_name]
+            color = panel_colors(i)
+            ax.plot(
+                panel_data.index,
+                panel_data['production'],
+                marker='o',
+                linewidth=2.5,
+                color=color,
+                label=panel_name
+            )
 
+        # Plot consumption line with a distinct color (red)
         if self.consumption is not None:
-            ax.plot(self.consumption, label = "Consumption", color = 'black')
-            sns.lineplot(
-                data=self.consumption,
-                x='date',
-                y='consumption',
-                color='black',
+            ax.plot(
+                self.consumption.index,
+                self.consumption['consumption'],
+                color='red',
                 marker='s',
                 linewidth=3,
                 linestyle='--',
-                label='Consumption',
+                label='Consumption'
             )
 
         ax.legend()
         ax.set_ylim(0, 750)
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Energy (kWh)')
+        ax.grid(True, alpha=0.3)
 
         if encode:
             return encode_plot(fig)
         return fig, ax
 
     def generate_report(self, template_dir: str, report_dir: str):
-
+        
+        report_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         data = {
-            'report_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'report_date': report_time,
             'location': 'Example Location',
 
             'panels': self.panel_config,
 
-            #'monthly_plot': self.plot(encode = True),
+            'monthly_plot': self.plot(encode = True),
             'panel_energy_totals': self.panel_production,
             "energy_metrics": {
                 'Total Energy Produced': (self.total_production, 'kWh'),
@@ -199,7 +208,7 @@ class Report:
         output = template.render(data)
 
         # Save the output to an HTML file
-        out_report = Path(report_dir, f'report_{datetime.now():%Y_%m_%d_%H%M%S}.html')
+        out_report = Path(report_dir, f'report_{report_time}.html')
         Path(out_report.parent).mkdir(exist_ok = True, parents = True)
         with open(out_report, mode="w", encoding='utf-8') as f:
             f.write(output)
