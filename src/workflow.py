@@ -2,6 +2,7 @@ import pandas as pd
 import yaml
 
 import datetime
+from pathlib import Path
 import logging
 import logging.config
 
@@ -45,9 +46,10 @@ class Workflow:
 
         ##TODO: include province_shp into optimizer to optimize against correct points
         ##TODO: get monthly optimized values and not singe value for whole year
+        loc_suffix = "_".join([str(i) for i in self.config["location"]]).replace(".", "_")
         out_radiation_table = Path(
-            config['FeatureSolarRadiation']['out_table_dir'], 
-            f'radiation_{"_".join(config['location'].replace('.', '_'))}.csv'
+            self.config['FeatureSolarRadiation']['out_table_dir'], 
+            f'radiation_{loc_suffix}.csv'
         )
         out_radiation_table.parent.mkdir(parents=True, exist_ok=True)
 
