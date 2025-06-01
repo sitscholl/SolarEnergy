@@ -45,19 +45,32 @@ class Workflow:
 
         ##TODO: include province_shp into optimizer to optimize against correct points
         ##TODO: get monthly optimized values and not singe value for whole year
-        calculator = SolarCalculator(self.config)
-        if calculator.error_tbl is None:
-            calculator.optimize(
-                dem=self.config["dem"],
-                observation_dir=self.config["optimization"]["optim_dir"],
-                observation_locs=self.config["optimization"]["optim_coords"],
-                out=self.config['optimization'].get('out')
-            )
+        out_radiation_table = Path(
+            config['FeatureSolarRadiation']['out_table_dir'], 
+            f'radiation_{"_".join(config['location'].replace('.', '_'))}.csv'
+        )
+        out_radiation_table.parent.mkdir(parents=True, exist_ok=True)
 
-        srad = calculator.calculate_radiation(dem = self.config['dem'])
+        if not out_radiation_table.exists():
+            logger.info("Starting to calculate radiation...")
+            calculator = SolarCalculator(self.config)
+            if calculator.error_tbl is None:
+                calculator.optimize(
+                    dem=self.config["dem"],
+                    observation_dir=self.config["optimization"]["optim_dir"],
+                    observation_locs=self.config["optimization"]["optim_coords"],
+                    out=self.config['optimization'].get('out')
+                )
+
+            srad = calculator.calculate_radiation(dem = self.config['dem'])
+            srad.to_csv(out_radiation_table)
+        else:
+            logger.info(f"Radiation data already exists. Loading from file {out_radiation_table}")
+            srad = pd.read_csv(out_radiation_table)
 
         consumption_file = self.config['consumption'].get('consumption_tbl')
         if consumption_file is not None:
+            logger.info(f'Consumption data available. Loading from {consumption_file}')
             consumption = pd.read_excel(consumption_file, usecols = ['date', 'consumption'])
             consumption["date"] = pd.to_datetime(consumption['date'], format = '%Y-%m-%d')
         else:

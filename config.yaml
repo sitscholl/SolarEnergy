@@ -10,7 +10,6 @@ consumption:
     consumption_tbl: 'data/power_consumption.xlsx'
 
 optimization:
-    optimize_params: true
     optim_dir: data/optim
     optim_coords: data/optim/province.shp
     optim_file: 'data/optim/optim_result_2025_02_22_1443.csv'
@@ -26,8 +25,8 @@ panels:
         efficiency: 0.15
         system_loss: 0.8
 
-
 FeatureSolarRadiation:
+    out_table_dir: data/radiation_analysis
     unique_id_field: ID
     time_zone: UTC
     start_date_time: "1/1/2024"

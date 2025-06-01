@@ -23,7 +23,6 @@ class ConsumptionConfig(BaseModel):
 
 class OptimizationConfig(BaseModel):
     """Configuration for optimization parameters."""
-    optimize_params: bool = Field(default=True, description="Whether to optimize parameters")
     optim_dir: str = Field(..., description="Directory for optimization files")
     optim_coords: str = Field(..., description="Path to optimization coordinates shapefile")
     optim_file: str = Field(..., description="Path to optimization result CSV file")
@@ -53,6 +52,7 @@ class PanelsConfig(BaseModel):
 
 class FeatureSolarRadiationConfig(BaseModel):
     """Configuration for solar radiation feature calculation."""
+    out_table_dir: str = Field(..., description="Path to the output directory for radiation analysis")
     unique_id_field: str = Field(default="ID", description="Unique identifier field name")
     time_zone: str = Field(default="UTC", description="Time zone for calculations")
     start_date_time: str = Field(..., description="Start date and time")
