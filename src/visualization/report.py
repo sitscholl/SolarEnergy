@@ -52,9 +52,7 @@ class Report:
             panel_data['production'] = self.solar_energy_to_electric_energy(
                 panel_data['srad'],
                 efficiency=panel_config[panel_name]['efficiency'],
-                system_loss=panel_config[panel_name]['system_loss'],
-                area=panel_config[panel_name]['area'],
-                kWp=None,
+                system_loss=panel_config[panel_name]['system_loss']
             )
             production_tbls.append(panel_data[['panel', 'production']])
         self.production = pd.concat(production_tbls)
@@ -62,7 +60,7 @@ class Report:
         self.panel_config = panel_config
 
     def solar_energy_to_electric_energy(
-        self, srad, efficiency=0.15, system_loss=0.8, area=None, kWp=None
+        self, srad, efficiency=0.15, system_loss=0.8
     ):
         """
         Convert solar radiation input into electricity output.
@@ -102,15 +100,7 @@ class Report:
         Total Electricity Output (kWh) = Solar Radiation (kWh/m²) × Area (m²) × Efficiency × System Loss Factor
         """
 
-        if area is None and kWp is None:
-            raise ValueError("Either area or kWp must be provided")
-        elif area is not None and kWp is not None:
-            raise ValueError("Only one of area or kWp must be provided")
-
-        if kWp is not None:
-            area = kWp / (1 * efficiency)
-
-        return srad * area * efficiency * system_loss
+        return srad * efficiency * system_loss
 
     @property
     def total_radiation(self):
@@ -181,7 +171,7 @@ class Report:
 
     def generate_report(self, template_dir: str, report_dir: str):
         
-        report_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        report_time = datetime.now().strftime('%Y%m%d_%H%M%S')
         data = {
             'report_date': report_time,
             'location': 'Example Location',
