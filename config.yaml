@@ -2,7 +2,7 @@ location: [642202.50, 5163856.06]
 crs: 25832
 dem: data/dem100m.tif
 price: 45 #ct/kWh
-#output_directory: data/output
+#output_directory: data/_thrash
 template_dir: templates/
 report_out: data/report
 
@@ -18,7 +18,7 @@ optimization:
 #20000 / 440
 panels:
     south: 
-        area: 0
+        area: 10
         offset: 7
         slope: 15
         aspect: 270
