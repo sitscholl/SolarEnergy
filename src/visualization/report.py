@@ -141,7 +141,6 @@ class Report:
             ax.plot(
                 panel_data.index,
                 panel_data['production'],
-                marker='o',
                 linewidth=2.5,
                 color=color,
                 label=panel_name

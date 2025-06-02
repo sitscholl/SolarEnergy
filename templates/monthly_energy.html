@@ -118,12 +118,12 @@
                     {% for panel_name, energy in panel_energy_totals.items() %}
                         <tr>
                             <td>{{ panel_name|title }}</td>
-                            <td class="energy-value">{{ energy }} kWh</td>
+                            <td class="energy-value">{{ energy|round(2) }} kWh</td>
                         </tr>
                     {% endfor %}
                     <tr class="total-row">
                         <td>Total</td>
-                        <td class="energy-value">{{ panel_energy_totals.values()|sum }} kWh</td>
+                        <td class="energy-value">{{ panel_energy_totals.values()|sum|round(2) }} kWh</td>
                     </tr>
                 </tbody>
             </table>
