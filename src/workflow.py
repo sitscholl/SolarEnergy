@@ -69,6 +69,7 @@ class Workflow:
         else:
             logger.info(f"Radiation data already exists. Loading from file {out_radiation_table}")
             srad = pd.read_csv(out_radiation_table)
+            srad['date'] = pd.to_datetime(srad['date'], format='%Y-%m-%d')
 
         consumption_file = self.config['consumption'].get('consumption_tbl')
         if consumption_file is not None:
