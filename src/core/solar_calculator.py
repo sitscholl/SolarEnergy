@@ -124,7 +124,8 @@ class SolarCalculator:
             if unique_id_field == 'ID':
                 unique_id_field = 'Id'
             _tbl = _tbl[[unique_id_field, "str_time", "global_ave", "direct_ave", "diff_ave", "dir_dur"]].copy()
-            _tbl.rename(columns={"str_time": "date", 'global_ave': 'srad'}, inplace = True)
+            _tbl.rename(columns={"str_time": "date"}, inplace = True)
+            _tbl['srad'] = _tbl['global_ave'] * panel_attrs.get('area', 0)
             _tbl['date'] = pd.to_datetime(_tbl['date'], format = '%Y-%m-%d')
             _tbl["panel"] = panel_name
 
