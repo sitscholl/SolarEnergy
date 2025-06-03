@@ -17,11 +17,25 @@ optimization:
 #20000 / 400
 #20000 / 440
 panels:
-    south: 
+    Panele-Sued: 
+        area: 10
+        offset: 7
+        slope: 15
+        aspect: 180
+        efficiency: 0.15
+        system_loss: 0.8
+    Panele-West:
         area: 10
         offset: 7
         slope: 15
         aspect: 270
+        efficiency: 0.15
+        system_loss: 0.8
+    Panele-Ost:
+        area: 10
+        offset: 7
+        slope: 15
+        aspect: 90
         efficiency: 0.15
         system_loss: 0.8
 

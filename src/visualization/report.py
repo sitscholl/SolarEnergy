@@ -188,7 +188,6 @@ class Report:
         report_time = datetime.now().strftime('%Y%m%d_%H%M%S')
         data = {
             'report_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'location': 'Example Location',
 
             'panels': self.panel_config,
 
@@ -199,7 +198,6 @@ class Report:
                 'Total Energy Consumed': (self.total_consumption, 'kWh'),
                 'Total Radiation': (self.total_radiation, 'kWh'),
                 'Energy Balance': (self.energy_balance, 'kWh'),
-                'Energy Efficiency': (self.energy_efficiency, ''),
             }
         }
 
