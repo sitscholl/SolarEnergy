@@ -106,27 +106,8 @@
     
     <div class="panel-totals">
         <h4>Total Energy Generated Per Panel</h4>
-        {% if panel_energy_totals %}
-            <table class="totals-table">
-                <thead>
-                    <tr>
-                        <th>Panel</th>
-                        <th>Total Energy</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for panel_name, energy in panel_energy_totals.items() %}
-                        <tr>
-                            <td>{{ panel_name|title }}</td>
-                            <td class="energy-value">{{ energy|round(2) }} kWh</td>
-                        </tr>
-                    {% endfor %}
-                    <tr class="total-row">
-                        <td>Total</td>
-                        <td class="energy-value">{{ panel_energy_totals.values()|sum|round(2) }} kWh</td>
-                    </tr>
-                </tbody>
-            </table>
+        {% if panel_energy_totals is not none %}
+            {{ panel_energy_totals.to_html(classes = "totals-table", index_names = False) }}
         {% else %}
             <p>No energy generation data available.</p>
         {% endif %}

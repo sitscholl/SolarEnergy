@@ -115,7 +115,16 @@ class Report:
 
     @property
     def panel_production(self):
-        return self.production.groupby('panel').sum().to_dict()['production']
+        return (
+            self.production
+            .pivot_table(
+                index=self.production.index.month,
+                columns='panel',
+                values='production',
+                fill_value=0
+            )
+            .round()
+            )
 
     @property
     def energy_efficiency(self, freq = 'M'):
