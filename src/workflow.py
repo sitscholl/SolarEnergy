@@ -46,30 +46,18 @@ class Workflow:
 
         ##TODO: include province_shp into optimizer to optimize against correct points
         ##TODO: get monthly optimized values and not singe value for whole year
-        loc_suffix = "_".join([str(i) for i in self.config["location"]]).replace(".", "_")
-        out_radiation_table = Path(
-            self.config['FeatureSolarRadiation']['out_table_dir'], 
-            f'radiation_{loc_suffix}.csv'
-        )
-        out_radiation_table.parent.mkdir(parents=True, exist_ok=True)
 
-        if not out_radiation_table.exists():
-            logger.info("Starting to calculate radiation...")
-            calculator = SolarCalculator(self.config)
-            if calculator.error_tbl is None:
-                calculator.optimize(
-                    dem=self.config["dem"],
-                    observation_dir=self.config["optimization"]["optim_dir"],
-                    observation_locs=self.config["optimization"]["optim_coords"],
-                    out=self.config['optimization'].get('out')
-                )
+        logger.info("Starting to calculate radiation...")
+        calculator = SolarCalculator(self.config)
+        if calculator.error_tbl is None:
+            calculator.optimize(
+                dem=self.config["dem"],
+                observation_dir=self.config["optimization"]["optim_dir"],
+                observation_locs=self.config["optimization"]["optim_coords"],
+                out=self.config['optimization'].get('out')
+            )
 
-            srad = calculator.calculate_radiation(dem = self.config['dem'])
-            srad.to_csv(out_radiation_table)
-        else:
-            logger.info(f"Radiation data already exists. Loading from file {out_radiation_table}")
-            srad = pd.read_csv(out_radiation_table)
-            srad['date'] = pd.to_datetime(srad['date'], format='%Y-%m-%d')
+        srad = calculator.calculate_radiation(dem = self.config['dem'])
 
         consumption_file = self.config['consumption'].get('consumption_tbl')
         if consumption_file is not None:
