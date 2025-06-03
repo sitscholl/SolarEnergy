@@ -132,18 +132,25 @@ class Report:
         # Define distinct colors for panels
         panel_colors = plt.cm.tab10
         
-        # Plot production lines for each panel with distinct colors
+        # Prepare data for stacked area plot
         panel_names = self.production['panel'].unique()
-        for i, panel_name in enumerate(panel_names):
-            panel_data = self.production[self.production['panel'] == panel_name]
-            color = panel_colors(i)
-            ax.plot(
-                panel_data.index,
-                panel_data['production'],
-                linewidth=2.5,
-                color=color,
-                label=panel_name
-            )
+        
+        # Create a pivot table to get production values for each panel by date
+        production_pivot = self.production.pivot_table(
+            index=self.production.index, 
+            columns='panel', 
+            values='production', 
+            fill_value=0
+        )
+        
+        # Create stacked area plot
+        ax.stackplot(
+            production_pivot.index,
+            *[production_pivot[panel] for panel in panel_names],
+            labels=panel_names,
+            colors=[panel_colors(i) for i in range(len(panel_names))],
+            alpha=0.8
+        )
 
         # Plot consumption line with a distinct color (red)
         if self.consumption is not None:
