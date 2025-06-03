@@ -32,18 +32,17 @@ class Report:
         consumption: Optional[pd.Series] = None
     ):
         # IncomingRadiationSchema.validate(srad)
-        self.srad = srad.set_index('date')[['panel', 'srad']]
-
+        self.srad = (
+            srad
+            .set_index('date')
+            .groupby('panel')
+            .resample('MS')['srad']
+            .sum()
+            .reset_index(level = 0)
+        )
         if consumption is not None:
             # ConsumptionSchema.validate(consumption)
             consumption = consumption.set_index('date')
-
-            consumption_freq = pd.infer_freq(consumption.index)
-            production_freq = pd.infer_freq(self.srad.index)
-
-            if consumption_freq != production_freq:
-                logger.warning(f"Datetime frequency in production table does not match frequency in consumption table. Got {production_freq} vs {consumption_freq}. Resampling consumption data")
-                consumption = consumption.resample(production_freq).mean()
 
         self.consumption = consumption
         
@@ -172,7 +171,7 @@ class Report:
         
         report_time = datetime.now().strftime('%Y%m%d_%H%M%S')
         data = {
-            'report_date': report_time,
+            'report_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'location': 'Example Location',
 
             'panels': self.panel_config,
@@ -185,7 +184,6 @@ class Report:
                 'Total Radiation': (self.total_radiation, 'kWh'),
                 'Energy Balance': (self.energy_balance, 'kWh'),
                 'Energy Efficiency': (self.energy_efficiency, ''),
-                'Peak Power Output': (0, 'kW'),
             }
         }
 
